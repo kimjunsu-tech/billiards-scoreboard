@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3인 당구 스코어보드 & 정산기</title>
+    <!-- Google Fonts: Noto Sans KR -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        felt: '#0a3a22',
+                        feltDark: '#052314',
+                        feltLight: '#145c38',
+                        gold: '#fbbf24',
+                        goldDark: '#d97706',
+                        accentRed: '#ef4444',
+                        accentBlue: '#3b82f6',
+                        darkCard: '#1a202c',
+                        darkBg: '#0f172a'
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        /* Felt Texture Effect */
+        .felt-bg {
+            background-color: #0a3a22;
+            background-image: radial-gradient(#145c38 15%, transparent 16%);
+            background-size: 12px 12px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between max-w-md mx-auto relative shadow-2xl bg-darkBg border-x border-slate-800">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-30 shadow-md">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid font-bold fa-circle text-emerald-500 text-xl"></i>
+                <h1 class="font-black text-xl tracking-tight text-white flex items-center gap-1.5">
+                    당구 삼국지 <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 font-medium border border-emerald-800">클라우드 동기화</span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="sync-status" class="text-[10px] px-2 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+                    <i class="fa-solid fa-cloud-arrow-up text-slate-500"></i> 연결 중...
+                </span>
+                <button onclick="confirmResetAll()" class="text-xs text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1 bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-rotate-right"></i> 초기화
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 overflow-y-auto mb-20">
+
+        <!-- TAB 1: 현재 다마수 Dashboard -->
+        <section id="tab-1" class="tab-content space-y-4">
+            <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 backdrop-blur space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                    <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy"></i> 현재 다마수 대시보드
+                    </h2>
+                    <span class="text-xs text-slate-400">실시간 클라우드 연동</span>
+                </div>
+
+                <!-- Custom Rule Settings: Promotion / Relegation Step & Target Values -->
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/80 space-y-3">
+                    <div class="flex justify-between items-center text-xs border-b border-slate-700/50 pb-1.5">
+                        <span class="font-bold text-slate-300 flex items-center gap-1">
+                            <i class="fa-solid fa-sliders text-emerald-400"></i> 승강등 조건 규칙 설정
+                        </span>
+                        <span class="text-[10px] text-slate-400">실시간 저장</span>
+                    </div>
+                    
+                    <!-- Dama Adjustment Amounts -->
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">승급 다마 (+)</label>
+                            <input type="number" id="step-promo" min="5" max="100" step="5" value="20" onchange="handleRuleInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-emerald-400 font-bold text-center focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">강등 다마 (-)</label>
+                            <input type="number" id="step-releg" min="5" max="100" step="5" value="20" onchange="handleRuleInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-rose-400 font-bold text-center focus:outline-none focus:border-rose-500">
+                        </div>
+                    </div>
+
+                    <!-- Consecutive Stack Thresholds -->
+                    <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-700/40">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">승급 필요 1등 연속 횟수</label>
+                            <input type="number" id="target-win-stack" min="1" max="10" step="1" value="2" onchange="handleRuleInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 font-bold text-center focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">강등 필요 3등 연속 횟수</label>
+                            <input type="number" id="target-loss-stack" min="1" max="10" step="1" value="2" onchange="handleRuleInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-rose-300 font-bold text-center focus:outline-none focus:border-rose-500">
+                        </div>
+                    </div>
+                </div>
+
+                <p id="rule-description-text" class="text-xs text-slate-400">
+                    <span id="text-win-target" class="text-amber-300 font-bold">2연속</span> 1등 시 <span id="text-promo-val" class="text-emerald-400 font-bold">+20</span> 승급 | 
+                    <span id="text-loss-target" class="text-rose-300 font-bold">2연속</span> 3등 시 <span id="text-releg-val" class="text-red-400 font-bold">-20</span> 강등
+                </p>
+            </div>
+
+            <!-- Player Status Cards List -->
+            <div id="player-cards-container" class="space-y-3">
+                <!-- Dynamic Player Cards Generated by JS -->
+            </div>
+
+            <div class="p-3 bg-slate-900/50 rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-1">
+                <div class="font-semibold text-slate-300 mb-1"><i class="fa-solid fa-circle-info mr-1 text-emerald-500"></i> 안내 사항</div>
+                <p class="text-[11px] text-slate-400">
+                    * 클라우드 동기화가 활성화되어 동일한 기기 및 웹 연결에서 실시간 데이터가 자동으로 공유됩니다.
+                </p>
+                <p class="text-[11px] text-slate-400 border-t border-slate-800/80 mt-1 pt-1">
+                    * 다마수 숫자를 클릭하거나 <i class="fa-solid fa-pen-to-square text-emerald-400"></i> 버튼을 눌러 언제든지 수동 변경할 수 있습니다.
+                </p>
+            </div>
+        </section>
+
+        <!-- TAB 2: 게임비 자동 정산 Calculator -->
+        <section id="tab-2" class="tab-content space-y-4 hidden">
+            <!-- Settings Form -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator"></i> 게임 결과 & 정산 입력
+                    </h2>
+                </div>
+
+                <!-- Settlement Ratio Customization -->
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/80 space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-slate-300 flex items-center gap-1">
+                            <i class="fa-solid fa-sliders text-emerald-400"></i> 게임비 분담 지분율 설정
+                        </span>
+                        <span class="text-[10px] text-slate-400">1등: 0% 고정</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">2등 지분율 (%)</label>
+                            <input type="number" id="ratio-rank2" min="0" max="100" step="5" value="30" oninput="handleRatioInput('rank2')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-amber-300 font-bold text-center focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1">3등 지분율 (%)</label>
+                            <input type="number" id="ratio-rank3" min="0" max="100" step="5" value="70" oninput="handleRatioInput('rank3')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-rose-300 font-bold text-center focus:outline-none focus:border-rose-500">
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 text-right">
+                        * 비율 합계: <span id="ratio-sum-display" class="font-bold text-emerald-400">100%</span>
+                    </div>
+                </div>
+
+                <!-- Date & Game Count Row -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">모임 날짜</label>
+                        <input type="date" id="game-date" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-medium focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">진행 게임 수 (판)</label>
+                        <div class="flex items-center bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+                            <button onclick="adjustGameCount(-1)" class="px-3 py-2 bg-slate-700/50 hover:bg-slate-700 active:bg-slate-600 text-slate-200 font-bold">-</button>
+                            <input type="number" id="game-count" min="1" max="20" value="1" readonly class="w-full text-center bg-transparent text-sm font-bold text-emerald-400 focus:outline-none">
+                            <button onclick="adjustGameCount(1)" class="px-3 py-2 bg-slate-700/50 hover:bg-slate-700 active:bg-slate-600 text-slate-200 font-bold">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Ranks Dynamic Container -->
+                <div id="game-matches-container" class="space-y-3 pt-2">
+                    <!-- Dynamic Matches Inputs -->
+                </div>
+
+                <!-- Total Cost Input -->
+                <div class="pt-2 border-t border-slate-800">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">총 당구비 금액 (원)</label>
+                    <div class="relative">
+                        <input type="number" id="total-cost" oninput="autoCalculateIfReady()" placeholder="예: 30000" step="100" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 pl-9 text-base font-bold text-gold focus:outline-none focus:border-gold">
+                        <i class="fa-solid fa-won-sign absolute left-3.5 top-3.5 text-slate-500 text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-2 space-y-2">
+                    <button onclick="calculateSettlementPreview()" class="w-full bg-slate-800 hover:bg-slate-700 border border-emerald-500/50 text-emerald-400 font-bold py-3 rounded-xl shadow-lg transition flex items-center justify-center gap-2 active:scale-98">
+                        <i class="fa-solid fa-eye"></i> 오늘 정산액 미리보기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div id="preview-card" class="hidden bg-felt border-2 border-emerald-500/40 p-4 rounded-2xl shadow-xl space-y-3 relative overflow-hidden">
+                <div class="flex justify-between items-center border-b border-emerald-800/80 pb-2">
+                    <span id="preview-ratio-label" class="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-receipt"></i> 정산 비율 (1등:0% / 2등:30% / 3등:70%)
+                    </span>
+                    <span class="text-xs text-emerald-200/70">10원 단위 절사</span>
+                </div>
+
+                <div id="preview-list" class="space-y-2">
+                    <!-- Dynamic Preview Lines -->
+                </div>
+
+                <div class="pt-2 border-t border-emerald-800/80 flex justify-between items-center text-xs text-emerald-200">
+                    <span>계산된 총 합계:</span>
+                    <span id="preview-sum-cost" class="font-bold text-gold text-sm">0원</span>
+                </div>
+
+                <button onclick="submitGameSession()" class="w-full mt-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 rounded-xl shadow-lg border border-emerald-400/30 transition flex items-center justify-center gap-2 text-base active:scale-98">
+                    <i class="fa-solid fa-floppy-disk"></i> 정산 완료 및 결과 저장
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 3: 누적 히스토리 History Log -->
+        <section id="tab-3" class="tab-content space-y-4 hidden">
+            <!-- Cumulative Stats Overview -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> 누적 통계 요약
+                </h2>
+                <div id="cumulative-stats-container" class="grid grid-cols-3 gap-2">
+                    <!-- Dynamic Player Cumulative Cards -->
+                </div>
+            </div>
+
+            <!-- Detailed History Logs -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left"></i> 날짜별 모임 상세 기록
+                    </h3>
+                    <span id="history-count" class="text-xs text-slate-500 font-medium">총 0건</span>
+                </div>
+
+                <div id="history-list-container" class="space-y-3">
+                    <!-- Dynamic History Cards -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 border-t border-slate-800 backdrop-blur-md z-40">
+        <div class="grid grid-cols-3 h-16">
+            <button onclick="switchTab(1)" id="nav-tab-1" class="nav-btn flex flex-col items-center justify-center text-emerald-500 font-bold transition-all">
+                <i class="fa-solid fa-table-cells-large text-lg mb-1"></i>
+                <span class="text-xs">현재 다마수</span>
+            </button>
+            <button onclick="switchTab(2)" id="nav-tab-2" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-calculator text-lg mb-1"></i>
+                <span class="text-xs">게임 정산</span>
+            </button>
+            <button onclick="switchTab(3)" id="nav-tab-3" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-list-check text-lg mb-1"></i>
+                <span class="text-xs">누적 기록</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modal Dialogs Container -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+            <div id="modal-icon" class="text-3xl text-amber-400 text-center">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="modal-title" class="text-lg font-bold text-white text-center">알림</h3>
+            <p id="modal-message" class="text-sm text-slate-300 text-center leading-relaxed">내용 메시지</p>
+            <div id="modal-actions" class="flex gap-2 pt-2">
+                <!-- Dynamic Modal Buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Realtime Database Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // IMPORTANT: Replace these sample values with the real config from Firebase Console.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiLeGY45vI46dHWd5KYT3WQR8kxeFbqXQ",
+            authDomain: "billiards-scoreboard-dabbb.firebaseapp.com",
+            databaseURL: "https://billiards-scoreboard-dabbb-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "billiards-scoreboard-dabbb",
+            appId: "1:1098404532153:web:d2012589609b247bb3b068"
+        };
+
+        const INITIAL_PLAYERS = [
+            { id: '창대', name: '창대', dama: 150, winStack: 0, lossStack: 0, totalWins: 0, totalGames: 0, totalPaid: 0 },
+            { id: '준수', name: '준수', dama: 240, winStack: 0, lossStack: 0, totalWins: 0, totalGames: 0, totalPaid: 0 },
+            { id: '성준', name: '성준', dama: 270, winStack: 0, lossStack: 0, totalWins: 0, totalGames: 0, totalPaid: 0 }
+        ];
+
+        const DEFAULT_SETTINGS = {
+            ratioRank2: 30,
+            ratioRank3: 70,
+            stepPromo: 20,
+            stepReleg: 20,
+            targetWinStack: 2,
+            targetLossStack: 2
+        };
+
+        window.state = {
+            players: JSON.parse(JSON.stringify(INITIAL_PLAYERS)),
+            settings: { ...DEFAULT_SETTINGS },
+            history: []
+        };
+
+        let db, auth;
+        let cloudReady = false;
+        let applyingRemoteData = false;
+        const localKey = 'billiards_app_state';
+
+        function updateSyncStatus(type, label) {
+            const el = document.getElementById('sync-status');
+            if (!el) return;
+            if (type === 'cloud') {
+                el.className = 'text-[10px] px-2 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-1';
+                el.innerHTML = `<i class="fa-solid fa-cloud-check"></i> ${label}`;
+            } else if (type === 'saving') {
+                el.className = 'text-[10px] px-2 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800 flex items-center gap-1';
+                el.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin"></i> 저장 중...`;
+            } else {
+                el.className = 'text-[10px] px-2 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1';
+                el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${label}`;
+            }
+        }
+
+        function syncAllUI() {
+            if (typeof window.syncRatioUI === 'function') window.syncRatioUI();
+            if (typeof window.syncRuleUI === 'function') window.syncRuleUI();
+            if (typeof window.renderAll === 'function') window.renderAll();
+        }
+
+        function loadLocalState() {
+            try {
+                const raw = localStorage.getItem(localKey);
+                if (!raw) return false;
+                const saved = JSON.parse(raw);
+                window.state.players = saved.players || JSON.parse(JSON.stringify(INITIAL_PLAYERS));
+                window.state.settings = { ...DEFAULT_SETTINGS, ...(saved.settings || {}) };
+                window.state.history = saved.history || [];
+                return true;
+            } catch (e) {
+                console.warn('Could not load local saved state:', e);
+                return false;
+            }
+        }
+
+        async function initFirebase() {
+            try {
+                if (firebaseConfig.apiKey.startsWith('PASTE_') ||
+                    firebaseConfig.projectId.startsWith('PASTE_') ||
+                    firebaseConfig.appId.startsWith('PASTE_') ||
+                    firebaseConfig.databaseURL.startsWith('PASTE_')) {
+                    throw new Error('HTML 파일의 firebaseConfig에 실제 Firebase 설정값을 입력해야 합니다.');
+                }
+
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getDatabase(app);
+                await signInAnonymously(auth);
+
+                const stateRef = ref(db, 'billiards-scoreboard/state');
+                onValue(stateRef, async (snapshot) => {
+                    applyingRemoteData = true;
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        window.state.players = data.players || JSON.parse(JSON.stringify(INITIAL_PLAYERS));
+                        window.state.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+                        window.state.history = Array.isArray(data.history) ? data.history : (data.history ? Object.values(data.history) : []);
+                        localStorage.setItem(localKey, JSON.stringify(window.state));
+                    } else {
+                        // First connection: seed the shared database from this browser's saved data if available.
+                        loadLocalState();
+                        await set(stateRef, {
+                            players: window.state.players,
+                            settings: window.state.settings,
+                            history: window.state.history,
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                    applyingRemoteData = false;
+                    cloudReady = true;
+                    updateSyncStatus('cloud', '실시간 공유 연결됨');
+                    syncAllUI();
+                }, (error) => {
+                    applyingRemoteData = false;
+                    console.error('Realtime Database read failed:', error);
+                    updateSyncStatus('error', '권한/연결 오류');
+                });
+            } catch (err) {
+                console.error('Firebase initialization failed:', err);
+                loadLocalState();
+                syncAllUI();
+                updateSyncStatus('error', 'Firebase 설정 필요');
+                alert('Firebase 연결에 실패했습니다. HTML 안의 firebaseConfig 값, 익명 로그인 설정, Realtime Database 보안 규칙을 확인하세요. 자세한 오류는 브라우저 개발자 도구(Console)에 표시됩니다.');
+            }
+        }
+
+        window.saveState = async function() {
+            localStorage.setItem(localKey, JSON.stringify(window.state));
+            if (applyingRemoteData || !cloudReady || !db) return;
+
+            updateSyncStatus('saving', '저장 중');
+            try {
+                await set(ref(db, 'billiards-scoreboard/state'), {
+                    players: window.state.players,
+                    settings: window.state.settings,
+                    history: window.state.history,
+                    updatedAt: new Date().toISOString()
+                });
+                updateSyncStatus('cloud', '실시간 공유 연결됨');
+            } catch (err) {
+                console.error('Realtime Database save failed:', err);
+                updateSyncStatus('error', '저장 실패');
+                alert('클라우드 저장에 실패했습니다. 인터넷 연결과 Firebase 보안 규칙을 확인하세요.');
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.setTodayDate === 'function') window.setTodayDate();
+            if (typeof window.renderMatchesInputs === 'function') window.renderMatchesInputs(1);
+            initFirebase();
+        });
+    </script>
+
+    <!-- Legacy Vanilla Logic Adapters & Scope Helpers -->
+    <script>
+        function syncRatioUI() {
+            const r2Input = document.getElementById('ratio-rank2');
+            const r3Input = document.getElementById('ratio-rank3');
+            if (r2Input) r2Input.value = window.state.settings.ratioRank2;
+            if (r3Input) r3Input.value = window.state.settings.ratioRank3;
+            updateRatioSumDisplay();
+        }
+
+        function syncRuleUI() {
+            const promoInput = document.getElementById('step-promo');
+            const relegInput = document.getElementById('step-releg');
+            const targetWinInput = document.getElementById('target-win-stack');
+            const targetLossInput = document.getElementById('target-loss-stack');
+
+            const s = window.state.settings;
+            if (promoInput) promoInput.value = s.stepPromo || 20;
+            if (relegInput) relegInput.value = s.stepReleg || 20;
+            if (targetWinInput) targetWinInput.value = s.targetWinStack || 2;
+            if (targetLossInput) targetLossInput.value = s.targetLossStack || 2;
+
+            updateRuleDescriptionText();
+        }
+
+        function handleRuleInput() {
+            const promoInput = document.getElementById('step-promo');
+            const relegInput = document.getElementById('step-releg');
+            const targetWinInput = document.getElementById('target-win-stack');
+            const targetLossInput = document.getElementById('target-loss-stack');
+
+            let pVal = parseInt(promoInput.value) || 20;
+            let rVal = parseInt(relegInput.value) || 20;
+            let twVal = parseInt(targetWinInput.value) || 2;
+            let tlVal = parseInt(targetLossInput.value) || 2;
+
+            pVal = Math.min(100, Math.max(5, pVal));
+            rVal = Math.min(100, Math.max(5, rVal));
+            twVal = Math.min(10, Math.max(1, twVal));
+            tlVal = Math.min(10, Math.max(1, tlVal));
+
+            promoInput.value = pVal;
+            relegInput.value = rVal;
+            targetWinInput.value = twVal;
+            targetLossInput.value = tlVal;
+
+            window.state.settings.stepPromo = pVal;
+            window.state.settings.stepReleg = rVal;
+            window.state.settings.targetWinStack = twVal;
+            window.state.settings.targetLossStack = tlVal;
+
+            window.saveState();
+            updateRuleDescriptionText();
+            renderTab1Dashboard();
+        }
+
+        function updateRuleDescriptionText() {
+            const s = window.state.settings;
+
+            const pEl = document.getElementById('text-promo-val');
+            const rEl = document.getElementById('text-releg-val');
+            const twEl = document.getElementById('text-win-target');
+            const tlEl = document.getElementById('text-loss-target');
+
+            if (pEl) pEl.textContent = `+${s.stepPromo}`;
+            if (rEl) rEl.textContent = `-${s.stepReleg}`;
+            if (twEl) twEl.textContent = `${s.targetWinStack}연속`;
+            if (tlEl) tlEl.textContent = `${s.targetLossStack}연속`;
+        }
+
+        function handleRatioInput(changed) {
+            const r2Input = document.getElementById('ratio-rank2');
+            const r3Input = document.getElementById('ratio-rank3');
+
+            let r2 = parseInt(r2Input.value) || 0;
+            let r3 = parseInt(r3Input.value) || 0;
+
+            if (changed === 'rank2') {
+                r2 = Math.min(100, Math.max(0, r2));
+                r3 = 100 - r2;
+                r3Input.value = r3;
+            } else {
+                r3 = Math.min(100, Math.max(0, r3));
+                r2 = 100 - r3;
+                r2Input.value = r2;
+            }
+
+            window.state.settings.ratioRank2 = r2;
+            window.state.settings.ratioRank3 = r3;
+            window.saveState();
+
+            updateRatioSumDisplay();
+            autoCalculateIfReady();
+        }
+
+        function updateRatioSumDisplay() {
+            const r2 = window.state.settings.ratioRank2;
+            const r3 = window.state.settings.ratioRank3;
+            const sumEl = document.getElementById('ratio-sum-display');
+            if (sumEl) {
+                sumEl.textContent = `${r2 + r3}%`;
+            }
+        }
+
+        function setTodayDate() {
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('game-date');
+            if (dateInput) dateInput.value = today;
+        }
+
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-emerald-500', 'font-bold');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`tab-${tabIndex}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-tab-${tabIndex}`);
+            activeNav.classList.remove('text-slate-400');
+            activeNav.classList.add('text-emerald-500', 'font-bold');
+
+            renderAll();
+        }
+
+        function renderAll() {
+            renderTab1Dashboard();
+            renderTab3StatsAndHistory();
+        }
+
+        function renderTab1Dashboard() {
+            const container = document.getElementById('player-cards-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+            const s = window.state.settings;
+
+            window.state.players.forEach(player => {
+                let badgeHTML = '';
+                const winNeeded = s.targetWinStack || 2;
+                const lossNeeded = s.targetLossStack || 2;
+
+                if (player.winStack > 0) {
+                    const isNextPromo = player.winStack + 1 >= winNeeded;
+                    const textMsg = isNextPromo ? '다음 판 승급' : `${winNeeded}연승 시 승급`;
+                    badgeHTML = `<span class="inline-flex items-center gap-1 bg-orange-500/20 text-orange-400 border border-orange-500/40 text-xs px-2.5 py-1 rounded-full font-bold">
+                        <i class="fa-solid fa-fire text-orange-500"></i> [+] ${player.winStack}승 중 (${textMsg})
+                    </span>`;
+                } else if (player.lossStack > 0) {
+                    const isNextReleg = player.lossStack + 1 >= lossNeeded;
+                    const textMsg = isNextReleg ? '다음 판 강등' : `${lossNeeded}연패 시 강등`;
+                    badgeHTML = `<span class="inline-flex items-center gap-1 bg-blue-500/20 text-blue-400 border border-blue-500/40 text-xs px-2.5 py-1 rounded-full font-bold">
+                        <i class="fa-solid fa-arrow-down text-blue-500"></i> [-] ${player.lossStack}패 중 (${textMsg})
+                    </span>`;
+                } else {
+                    badgeHTML = `<span class="inline-flex items-center gap-1 bg-slate-800 text-slate-400 border border-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                        <i class="fa-solid fa-shield text-slate-500"></i> 안정
+                    </span>`;
+                }
+
+                const cardHTML = `
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg flex items-center justify-between">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-black text-lg text-white">${player.name}</span>
+                                ${badgeHTML}
+                            </div>
+                            <div class="text-xs text-slate-400 flex gap-3 pt-1">
+                                <span>1등 횟수: <strong class="text-slate-200">${player.totalWins}회</strong></span>
+                                <span>총 게임: <strong class="text-slate-200">${player.totalGames}판</strong></span>
+                            </div>
+                        </div>
+                        <button onclick="promptEditDama('${player.id}')" class="text-right bg-slate-950 hover:bg-slate-800 active:scale-95 transition px-3.5 py-2 rounded-xl border border-slate-800 group cursor-pointer">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center justify-end gap-1 group-hover:text-emerald-400">
+                                <span>현재 다마</span> <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                            </div>
+                            <div class="text-2xl font-black text-gold">${player.dama}</div>
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        }
+
+        function promptEditDama(playerId) {
+            const player = window.state.players.find(p => p.id === playerId);
+            if (!player) return;
+
+            showInputModal(`${player.name} 다마수 직접 변경`, `현재 다마: ${player.dama}\n변경할 다마수를 입력하세요:`, player.dama, (newValue) => {
+                const newDama = parseInt(newValue);
+                if (!isNaN(newDama) && newDama >= 30 && newDama <= 2000) {
+                    player.dama = newDama;
+                    window.saveState();
+                    renderAll();
+                    showModal('변경 완료', `${player.name}님의 다마수가 ${newDama}(으)로 변경되었습니다.`);
+                } else {
+                    showModal('입력 오류', '올바른 다마수를 입력해주세요 (30 ~ 2000).');
+                }
+            });
+        }
+
+        function adjustGameCount(delta) {
+            const input = document.getElementById('game-count');
+            let current = parseInt(input.value) || 1;
+            current = Math.max(1, Math.min(20, current + delta));
+            input.value = current;
+            renderMatchesInputs(current);
+            hidePreview();
+        }
+
+        function renderMatchesInputs(count) {
+            const container = document.getElementById('game-matches-container');
+            if (!container) return;
+
+            const r2Ratio = window.state.settings.ratioRank2;
+            const r3Ratio = window.state.settings.ratioRank3;
+
+            container.innerHTML = '';
+
+            for (let i = 1; i <= count; i++) {
+                const matchBox = `
+                    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 space-y-2">
+                        <div class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                            <i class="fa-solid fa-hashtag text-[10px]"></i> ${i}번째 판 결과
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-0.5">1등 (0%)</label>
+                                <select id="match-${i}-rank-1" onchange="handleRankChange(${i}, 1)" class="rank-select w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-emerald-300 font-bold focus:outline-none focus:border-emerald-500">
+                                    <option value="">선택</option>
+                                    ${window.state.players.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-0.5">2등 (${r2Ratio}%)</label>
+                                <select id="match-${i}-rank-2" onchange="handleRankChange(${i}, 2)" class="rank-select w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-500">
+                                    <option value="">선택</option>
+                                    ${window.state.players.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400 mb-0.5">3등 (${r3Ratio}%)</label>
+                                <select id="match-${i}-rank-3" onchange="handleRankChange(${i}, 3)" class="rank-select w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-rose-300 font-bold focus:outline-none focus:border-rose-500">
+                                    <option value="">선택</option>
+                                    ${window.state.players.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += matchBox;
+            }
+
+            for (let i = 1; i <= count; i++) {
+                const s1 = document.getElementById(`match-${i}-rank-1`);
+                const s2 = document.getElementById(`match-${i}-rank-2`);
+                const s3 = document.getElementById(`match-${i}-rank-3`);
+                if (s1 && s2 && s3 && window.state.players.length >= 3) {
+                    s1.value = window.state.players[0].id;
+                    s2.value = window.state.players[1].id;
+                    s3.value = window.state.players[2].id;
+                }
+            }
+        }
+
+        function handleRankChange(matchIndex, changedRank) {
+            const s1 = document.getElementById(`match-${matchIndex}-rank-1`);
+            const s2 = document.getElementById(`match-${matchIndex}-rank-2`);
+            const s3 = document.getElementById(`match-${matchIndex}-rank-3`);
+            if (!s1 || !s2 || !s3) return;
+
+            const selects = { 1: s1, 2: s2, 3: s3 };
+            const allPlayerIds = window.state.players.map(p => p.id);
+
+            const val1 = s1.value;
+            const val2 = s2.value;
+            const val3 = s3.value;
+
+            const currentVals = [val1, val2, val3].filter(v => v !== '');
+
+            if (currentVals.length === 2) {
+                const filledVals = [val1, val2, val3];
+                const emptyRank = [1, 2, 3].find(r => selects[r].value === '');
+                const used = filledVals.filter(v => v !== '');
+                
+                if (used[0] !== used[1]) {
+                    const remaining = allPlayerIds.find(id => !used.includes(id));
+                    if (remaining && emptyRank) {
+                        selects[emptyRank].value = remaining;
+                    }
+                }
+            } else if (currentVals.length === 3) {
+                const ranks = [1, 2, 3];
+                const otherRanks = ranks.filter(r => r !== changedRank);
+                const changedVal = selects[changedRank].value;
+
+                const duplicateRank = otherRanks.find(r => selects[r].value === changedVal);
+                if (duplicateRank) {
+                    const remainingPlayer = allPlayerIds.find(id => id !== selects[otherRanks[0]].value && id !== selects[otherRanks[1]].value && id !== changedVal);
+                    if (remainingPlayer) {
+                        selects[duplicateRank].value = remainingPlayer;
+                    }
+                }
+            }
+
+            autoCalculateIfReady();
+        }
+
+        function autoCalculateIfReady() {
+            const totalCost = parseInt(document.getElementById('total-cost').value);
+            if (!isNaN(totalCost) && totalCost > 0) {
+                calculateSettlementPreview(true);
+            }
+        }
+
+        function validateMatchSelections(gameCount) {
+            const matches = [];
+            for (let i = 1; i <= gameCount; i++) {
+                const r1 = document.getElementById(`match-${i}-rank-1`).value;
+                const r2 = document.getElementById(`match-${i}-rank-2`).value;
+                const r3 = document.getElementById(`match-${i}-rank-3`).value;
+
+                if (!r1 || !r2 || !r3) {
+                    showModal('입력 오류', `${i}번째 판의 순위를 모두 선택해주세요.`);
+                    return null;
+                }
+
+                if (r1 === r2 || r1 === r3 || r2 === r3) {
+                    showModal('중복 선택 오류', `${i}번째 판에 중복 선택된 플레이어가 있습니다.`);
+                    return null;
+                }
+
+                matches.push({ rank1: r1, rank2: r2, rank3: r3 });
+            }
+            return matches;
+        }
+
+        function hidePreview() {
+            const previewCard = document.getElementById('preview-card');
+            if (previewCard) previewCard.classList.add('hidden');
+        }
+
+        function calculateSettlementPreview(silent = false) {
+            const gameCount = parseInt(document.getElementById('game-count').value) || 1;
+            const totalCost = parseInt(document.getElementById('total-cost').value);
+
+            if (isNaN(totalCost) || totalCost <= 0) {
+                if (!silent) showModal('금액 오류', '올바른 총 당구비를 입력해주세요.');
+                return;
+            }
+
+            const matches = validateMatchSelections(gameCount);
+            if (!matches) return;
+
+            const r2RatioDecimal = window.state.settings.ratioRank2 / 100;
+            const r3RatioDecimal = window.state.settings.ratioRank3 / 100;
+
+            const playerShares = { '창대': 0, '준수': 0, '성준': 0 };
+
+            matches.forEach(m => {
+                playerShares[m.rank1] += 0;
+                playerShares[m.rank2] += r2RatioDecimal;
+                playerShares[m.rank3] += r3RatioDecimal;
+            });
+
+            const ratioLabel = document.getElementById('preview-ratio-label');
+            if (ratioLabel) {
+                ratioLabel.innerHTML = `<i class="fa-solid fa-receipt"></i> 정산 비율 (1등:0% / 2등:${window.state.settings.ratioRank2}% / 3등:${window.state.settings.ratioRank3}%)`;
+            }
+
+            const previewList = document.getElementById('preview-list');
+            previewList.innerHTML = '';
+
+            let totalCalculatedSum = 0;
+
+            window.state.players.forEach(p => {
+                const shareSum = playerShares[p.id];
+                const rawAmount = totalCost * (shareSum / gameCount);
+                const finalAmount = Math.floor(rawAmount / 10) * 10;
+                totalCalculatedSum += finalAmount;
+
+                const itemHTML = `
+                    <div class="flex justify-between items-center bg-slate-900/60 p-2.5 rounded-xl border border-emerald-800/50">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white text-sm">${p.name}</span>
+                            <span class="text-[10px] text-emerald-300/80 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/60">
+                                지분합: ${shareSum.toFixed(2)}
+                            </span>
+                        </div>
+                        <div class="font-black text-gold text-base">
+                            ${finalAmount.toLocaleString()}원
+                        </div>
+                    </div>
+                `;
+                previewList.innerHTML += itemHTML;
+            });
+
+            document.getElementById('preview-sum-cost').textContent = `${totalCalculatedSum.toLocaleString()}원`;
+            document.getElementById('preview-card').classList.remove('hidden');
+            if (!silent) document.getElementById('preview-card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function submitGameSession() {
+            const dateVal = document.getElementById('game-date').value;
+            const gameCount = parseInt(document.getElementById('game-count').value) || 1;
+            const totalCost = parseInt(document.getElementById('total-cost').value);
+
+            if (!dateVal) {
+                showModal('날짜 오류', '모임 날짜를 선택해주세요.');
+                return;
+            }
+
+            const matches = validateMatchSelections(gameCount);
+            if (!matches) return;
+
+            if (isNaN(totalCost) || totalCost <= 0) {
+                showModal('금액 오류', '올바른 총 당구비를 입력해주세요.');
+                return;
+            }
+
+            const r2RatioDecimal = window.state.settings.ratioRank2 / 100;
+            const r3RatioDecimal = window.state.settings.ratioRank3 / 100;
+
+            const playerShares = { '창대': 0, '준수': 0, '성준': 0 };
+            const playerWinsToday = { '창대': 0, '준수': 0, '성준': 0 };
+
+            matches.forEach(m => {
+                playerShares[m.rank1] += 0;
+                playerShares[m.rank2] += r2RatioDecimal;
+                playerShares[m.rank3] += r3RatioDecimal;
+                playerWinsToday[m.rank1] += 1;
+            });
+
+            const paidToday = {};
+            window.state.players.forEach(p => {
+                const shareSum = playerShares[p.id];
+                const rawAmount = totalCost * (shareSum / gameCount);
+                paidToday[p.id] = Math.floor(rawAmount / 10) * 10;
+            });
+
+            const updatedPlayers = JSON.parse(JSON.stringify(window.state.players));
+            const detailedMatchResults = [];
+
+            const stepPromo = window.state.settings.stepPromo || 20;
+            const stepReleg = window.state.settings.stepReleg || 20;
+            const targetWinStack = window.state.settings.targetWinStack || 2;
+            const targetLossStack = window.state.settings.targetLossStack || 2;
+
+            matches.forEach((match, index) => {
+                const matchEvents = [];
+
+                updatedPlayers.forEach(p => {
+                    let changeType = 'none';
+                    let deltaDama = 0;
+
+                    if (p.id === match.rank1) {
+                        p.winStack += 1;
+                        p.lossStack = 0;
+                        if (p.winStack >= targetWinStack) {
+                            p.dama += stepPromo;
+                            p.winStack = 0;
+                            changeType = 'promoted';
+                            deltaDama = stepPromo;
+                        }
+                    } else if (p.id === match.rank2) {
+                        p.winStack = 0;
+                        p.lossStack = 0;
+                    } else if (p.id === match.rank3) {
+                        p.lossStack += 1;
+                        p.winStack = 0;
+                        if (p.lossStack >= targetLossStack) {
+                            p.dama -= stepReleg;
+                            p.lossStack = 0;
+                            changeType = 'relegated';
+                            deltaDama = -stepReleg;
+                        }
+                    }
+
+                    matchEvents.push({
+                        playerId: p.id,
+                        name: p.name,
+                        currentDama: p.dama,
+                        changeType: changeType,
+                        deltaDama: deltaDama
+                    });
+                });
+
+                detailedMatchResults.push({
+                    rank1: match.rank1,
+                    rank2: match.rank2,
+                    rank3: match.rank3,
+                    playerStates: matchEvents
+                });
+            });
+
+            updatedPlayers.forEach(p => {
+                p.totalWins += playerWinsToday[p.id];
+                p.totalGames += gameCount;
+                p.totalPaid += paidToday[p.id];
+            });
+
+            window.state.players = updatedPlayers;
+
+            const newHistoryItem = {
+                id: 'hist_' + Date.now(),
+                date: dateVal,
+                gameCount: gameCount,
+                totalCost: totalCost,
+                ratios: { r2: window.state.settings.ratioRank2, r3: window.state.settings.ratioRank3 },
+                matches: matches,
+                detailedMatches: detailedMatchResults,
+                paidToday: paidToday,
+                winsToday: playerWinsToday
+            };
+
+            window.state.history.unshift(newHistoryItem);
+            window.saveState();
+
+            showModal('저장 완료', '오늘의 당구 게임 정산 및 클라우드 동기화가 완료되었습니다.', () => {
+                hidePreview();
+                document.getElementById('total-cost').value = '';
+                switchTab(1);
+            });
+        }
+
+        function renderTab3StatsAndHistory() {
+            const statsContainer = document.getElementById('cumulative-stats-container');
+            if (statsContainer) {
+                statsContainer.innerHTML = '';
+                window.state.players.forEach(p => {
+                    const cardHTML = `
+                        <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/70 text-center space-y-1">
+                            <div class="font-bold text-white text-xs">${p.name}</div>
+                            <div class="text-[10px] text-slate-400">1등: <strong class="text-emerald-400 font-bold">${p.totalWins}회</strong></div>
+                            <div class="text-[10px] text-slate-400">진행: <strong class="text-slate-200 font-bold">${p.totalGames}판</strong></div>
+                            <div class="text-[10px] text-gold font-bold pt-1 border-t border-slate-700/50">${p.totalPaid.toLocaleString()}원</div>
+                        </div>
+                    `;
+                    statsContainer.innerHTML += cardHTML;
+                });
+            }
+
+            const historyContainer = document.getElementById('history-list-container');
+            const historyCountEl = document.getElementById('history-count');
+
+            if (historyCountEl) historyCountEl.textContent = `총 ${window.state.history.length}건`;
+
+            if (historyContainer) {
+                historyContainer.innerHTML = '';
+
+                if (window.state.history.length === 0) {
+                    historyContainer.innerHTML = `
+                        <div class="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 text-center text-slate-500 text-xs">
+                            <i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>
+                            저장된 모임 기록이 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+
+                window.state.history.forEach(item => {
+                    let matchesSummary = '';
+
+                    if (item.detailedMatches && item.detailedMatches.length > 0) {
+                        matchesSummary = item.detailedMatches.map((m, idx) => {
+                            const getDamaText = (pId) => {
+                                const st = m.playerStates.find(s => s.playerId === pId);
+                                if (!st) return '';
+                                let tag = '';
+                                if (st.changeType === 'promoted') {
+                                    tag = `<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] px-1 py-0.2 rounded font-bold ml-1">▲ +${st.deltaDama || 20} 승급</span>`;
+                                } else if (st.changeType === 'relegated') {
+                                    tag = `<span class="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] px-1 py-0.2 rounded font-bold ml-1">▼ ${st.deltaDama || -20} 강등</span>`;
+                                }
+                                return `<span class="text-[10px] text-slate-400 font-normal">(${st.currentDama})</span>${tag}`;
+                            };
+
+                            return `
+                                <div class="text-[11px] text-slate-300 py-1 border-b border-slate-800/60 last:border-0 space-y-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-slate-500 font-bold">${idx + 1}판:</span>
+                                        <span>🥇<strong class="text-emerald-400">${getplayerName(m.rank1)}</strong> ${getDamaText(m.rank1)}</span>
+                                        <span>🥈<span class="text-amber-300">${getplayerName(m.rank2)}</span> ${getDamaText(m.rank2)}</span>
+                                        <span>🥉<span class="text-rose-400">${getplayerName(m.rank3)}</span> ${getDamaText(m.rank3)}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        matchesSummary = item.matches.map((m, idx) => `
+                            <div class="text-[11px] text-slate-300 flex items-center justify-between py-0.5">
+                                <span class="text-slate-500 font-medium">${idx + 1}판:</span>
+                                <span>🥇<strong class="text-emerald-400">${getplayerName(m.rank1)}</strong></span>
+                                <span>🥈<span class="text-amber-300">${getplayerName(m.rank2)}</span></span>
+                                <span>🥉<span class="text-rose-400">${getplayerName(m.rank3)}</span></span>
+                            </div>
+                        `).join('');
+                    }
+
+                    let paidSummary = Object.keys(item.paidToday).map(pId => `
+                        <span class="text-[11px] text-slate-300">
+                            ${getplayerName(pId)}: <strong class="text-gold">${item.paidToday[pId].toLocaleString()}원</strong>
+                        </span>
+                    `).join(' / ');
+
+                    const ratioInfo = item.ratios ? `(2등 ${item.ratios.r2}% / 3등 ${item.ratios.r3}%)` : '';
+
+                    const cardHTML = `
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-md space-y-3 relative">
+                            <div class="flex justify-between items-start border-b border-slate-800 pb-2">
+                                <div>
+                                    <div class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-calendar-day"></i> ${item.date}
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">
+                                        총 ${item.gameCount}판 진행 | 총 당구비 ${item.totalCost.toLocaleString()}원 ${ratioInfo}
+                                    </div>
+                                </div>
+                                <button onclick="confirmDeleteHistory('${item.id}')" class="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95 transition">
+                                    <i class="fa-solid fa-trash-can"></i> 삭제
+                                </button>
+                            </div>
+
+                            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                                ${matchesSummary}
+                            </div>
+
+                            <div class="pt-1 text-right border-t border-slate-800/80">
+                                <div class="text-[10px] text-slate-400 mb-0.5">각자 낸 금액</div>
+                                <div class="flex flex-wrap justify-end gap-x-2">${paidSummary}</div>
+                            </div>
+                        </div>
+                    `;
+                    historyContainer.innerHTML += cardHTML;
+                });
+            }
+        }
+
+        function getplayerName(id) {
+            const p = window.state.players.find(x => x.id === id);
+            return p ? p.name : id;
+        }
+
+        function confirmDeleteHistory(historyId) {
+            showConfirmModal('기록 삭제', '해당 기록을 삭제하시겠습니까?\n삭제 시 반영되었던 지출액 및 승패 통계가 차감 회수됩니다.', () => {
+                deleteHistoryItem(historyId);
+            });
+        }
+
+        function deleteHistoryItem(historyId) {
+            const index = window.state.history.findIndex(h => h.id === historyId);
+            if (index === -1) return;
+
+            const item = window.state.history[index];
+
+            window.state.players.forEach(p => {
+                if (item.winsToday && item.winsToday[p.id]) {
+                    p.totalWins = Math.max(0, p.totalWins - item.winsToday[p.id]);
+                }
+                p.totalGames = Math.max(0, p.totalGames - item.gameCount);
+                if (item.paidToday && item.paidToday[p.id]) {
+                    p.totalPaid = Math.max(0, p.totalPaid - item.paidToday[p.id]);
+                }
+            });
+
+            window.state.history.splice(index, 1);
+            window.saveState();
+
+            renderAll();
+            showModal('삭제 완료', '기록이 삭제되었으며 누적 통계 데이터가 복원되었습니다.');
+        }
+
+        function confirmResetAll() {
+            showConfirmModal('전체 데이터 초기화', '모든 다마수와 누적 모임 기록을 초기 설정으로 되돌리시겠습니까?\n이 작업은 클라우드 데이터에도 즉시 반영됩니다.', () => {
+                window.state.players = [
+                    { id: '창대', name: '창대', dama: 150, winStack: 0, lossStack: 0, totalWins: 0, totalGames: 0, totalPaid: 0 },
+                    { id: '준수', name: '준수', dama: 240, winStack: 0, lossStack: 0, totalWins: 0, totalGames: 0, totalPaid: 0 },
+                    { id: '성준', name: '성준', dama: 270, winStack: 0, lossStack: 0, totalWins: 0, totalGames: 0, totalPaid: 0 }
+                ];
+                window.state.settings = {
+                    ratioRank2: 30,
+                    ratioRank3: 70,
+                    stepPromo: 20,
+                    stepReleg: 20,
+                    targetWinStack: 2,
+                    targetLossStack: 2
+                };
+                window.state.history = [];
+                window.saveState();
+                syncRatioUI();
+                syncRuleUI();
+                renderAll();
+                showModal('초기화 완료', '모든 데이터가 성공적으로 초기화되었습니다.');
+            });
+        }
+
+        function showModal(title, message, callback = null) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-icon').innerHTML = `<i class="fa-solid fa-circle-info text-emerald-400"></i>`;
+
+            const actions = document.getElementById('modal-actions');
+            actions.innerHTML = `
+                <button id="modal-ok-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                    확인
+                </button>
+            `;
+
+            modal.classList.remove('hidden');
+
+            document.getElementById('modal-ok-btn').onclick = () => {
+                modal.classList.add('hidden');
+                if (callback) callback();
+            };
+        }
+
+        function showInputModal(title, message, defaultValue, onSubmit) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').innerHTML = `
+                <div class="space-y-2">
+                    <p class="whitespace-pre-line text-xs text-slate-300">${message}</p>
+                    <input type="number" id="modal-number-input" value="${defaultValue}" step="10" min="30" max="2000" class="w-full bg-slate-800 border border-emerald-500 rounded-xl px-3 py-2 text-center text-lg font-black text-gold focus:outline-none">
+                </div>
+            `;
+            document.getElementById('modal-icon').innerHTML = `<i class="fa-solid fa-pen-to-square text-emerald-400"></i>`;
+
+            const actions = document.getElementById('modal-actions');
+            actions.innerHTML = `
+                <button id="modal-cancel-btn" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-sm transition">
+                    취소
+                </button>
+                <button id="modal-submit-btn" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                    수정 완료
+                </button>
+            `;
+
+            modal.classList.remove('hidden');
+
+            const input = document.getElementById('modal-number-input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+
+            document.getElementById('modal-cancel-btn').onclick = () => {
+                modal.classList.add('hidden');
+            };
+
+            document.getElementById('modal-submit-btn').onclick = () => {
+                const val = document.getElementById('modal-number-input').value;
+                modal.classList.add('hidden');
+                if (onSubmit) onSubmit(val);
+            };
+        }
+
+        function showConfirmModal(title, message, onConfirm) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-icon').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>`;
+
+            const actions = document.getElementById('modal-actions');
+            actions.innerHTML = `
+                <button id="modal-cancel-btn" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-sm transition">
+                    취소
+                </button>
+                <button id="modal-confirm-btn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                    삭제/초기화
+                </button>
+            `;
+
+            modal.classList.remove('hidden');
+
+            document.getElementById('modal-cancel-btn').onclick = () => {
+                modal.classList.add('hidden');
+            };
+
+            document.getElementById('modal-confirm-btn').onclick = () => {
+                modal.classList.add('hidden');
+                if (onConfirm) onConfirm();
+            };
+        }
+    </script>
+</body>
+</html>
